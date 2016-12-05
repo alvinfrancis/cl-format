@@ -115,11 +115,7 @@ CL format parlance\)."
 
 (defun cl-format-get-directive (char)
   "Return the clx directive struct corresponding to CHAR."
-  (cdr (assq char cl-format-directives)))
-      ;; (if (eq char (downcase char))
-      ;;     (cdr (assq (upcase char) cl-format-directives))
-      ;;   (cdr (assq (downcase char) cl-format-directives)))
-
+  (cdr (cl-assoc char cl-format-directives :test 'char-equal)))
 
 (defun cl-format-parse (fmt &optional start contained-end)
   "Parse format string FMT, starting at START until CONTAINED-END char.
