@@ -1,4 +1,4 @@
-;; -*- emacs-lisp -*- vim:filetype=lisp
+;; cl-format.ert --- Tests for cl-format  -*- lexical-binding: t; mode: emacs-lisp -*- vim:filetype=lisp
 ;;*****************************************************************************
 ;;*    Rosenmueller            format.tst                                     *
 ;;*****************************************************************************
@@ -127,55 +127,52 @@
 ")))
 
 
-(labels ((format-blocksatz (stream parts prefix &optional line-length start-p end-p)
-           (if (null stream)
-               (with-output-to-string
-                 (format-blocksatz standard-output parts prefix line-length start-p end-p))
-             (unless (endp parts)
-               (setq line-length (or line-length ;; #|(sys::line-length stream)|#
-                                     72))
-               (when start-p (cl-format stream prefix))
-               (loop do
+(cl-labels ((format-blocksatz (stream parts prefix &optional line-length start-p end-p)
+             (if (null stream)
+                 (with-output-to-string
+                   (format-blocksatz standard-output parts prefix line-length start-p end-p))
+               (unless (cl-endp parts)
+                 (setq line-length (or line-length
+                                       ;; #|(sys::line-length stream)|#
+                                       72))
+                 (when start-p (cl-format stream prefix))
+                 (cl-loop
 ;;; Hier ist parts /= NIL
-                     (let ((pos (current-column))
+                  (let ((pos (current-column))
 ;;; #+CMU lisp::charpos
 ;;; #+SBCL sb-kernel:charpos
 ;;; #+OpenMCL ccl::column
 ;;; #+LISPWORKS stream:stream-line-column
-                           (parts-now '()))
-                       (let ((pos-now pos))
-                         (loop do
-                               (when (endp parts) (return))
-                               (let* ((part (first parts))
-                                      (part-length (length part)))
-                                 (unless (null parts-now)
-                                   (when (> (+ pos-now part-length) line-length)
-                                     (return)
-                                     ) )
-                                 (pop parts)
-                                 (push part parts-now)
-                                 (incf pos-now part-length)
-                                 ) ) )
+                        (parts-now '()))
+                    (let ((pos-now pos))
+                      (cl-loop
+                       (when (cl-endp parts) (cl-return))
+                       (let* ((part (cl-first parts))
+                              (part-length (length part)))
+                         (unless (null parts-now)
+                           (when (> (+ pos-now part-length) line-length)
+                             (cl-return)))
+                         (pop parts)
+                         (push part parts-now)
+                         (cl-incf pos-now part-length))))
 ;;; Hier ist parts-now /= NIL
-                       (apply #'cl-format
-                              stream
-                              (if (and (endp parts) (not end-p))
-                                  (apply 'concatenate 'string
-                                         (make-list (length parts-now) "~a"))
-                                (concatenate 'string
-                                             "~"
-                                             (prin1-to-string (max 0 (- line-length pos)))
-                                             (if (= (length parts-now) 1) "@" "")
-                                             "<"
-                                             (apply #'concatenate 'string
-                                                    "~a"
-                                                    (make-list (1- (length parts-now)) "~;~a")
-                                                    )
-                                             "~>"
-                                             ))
-                              (nreverse parts-now)))
-                     (when (endp parts) (return))
-                     (cl-format stream prefix))))))
+                    (apply #'cl-format
+                           stream
+                           (if (and (cl-endp parts) (not end-p))
+                               (apply 'cl-concatenate 'string
+                                      (make-list (length parts-now) "~a"))
+                             (cl-concatenate 'string
+                                          "~"
+                                          (prin1-to-string (max 0 (- line-length pos)))
+                                          (if (= (length parts-now) 1) "@" "")
+                                          "<"
+                                          (apply #'cl-concatenate 'string
+                                                 "~a"
+                                                 (make-list (1- (length parts-now)) "~;~a"))
+                                          "~>"))
+                           (nreverse parts-now)))
+                  (when (cl-endp parts) (cl-return))
+                  (cl-format stream prefix))))))
        
 
   (ert-deftest format-018 ()
@@ -257,9 +254,9 @@
 
 (ert-deftest format-021 ()
   
-  (flet ((foo (x)
-           (cl-format nil "~6,2f|~6,2,1,'*f|~6,2,,'?f|~6f|~,2f|~f" x x x x
-                      x x)))
+  (cl-flet ((foo (x)
+               (cl-format nil "~6,2f|~6,2,1,'*f|~6,2,,'?f|~6f|~,2f|~f"
+                          x x x x x x)))
 
     (should (equal (foo 3.14159)
 ;;;       "  3.14| 31.42|  3.14|3.1416|3.14|3.141590116672995328"
@@ -335,10 +332,10 @@
 ;; Format E
 
 (ert-deftest format-032 ()
-  (flet ((foo (x)
-           (cl-format nil
-            "~9,2,1,,'*e|~10,3,2,2,'?,,'$e|~9,3,2,-2,'%@e|~9,2e"
-            x x x x)))
+  (cl-flet ((foo (x)
+               (cl-format nil
+                          "~9,2,1,,'*e|~10,3,2,2,'?,,'$e|~9,3,2,-2,'%@e|~9,2e"
+                          x x x x)))
             
     (should (equal (foo 3.14159)
                    "  3.14e+0| 31.42$-01|+.003e+03|  3.14e+0"))
@@ -388,7 +385,7 @@
   (dolist (lm '("least" "most"))
     (dolist (pn '("positive" "negative"))
       (dolist (ty '("float")) ; "long"
-        (let* ((s (concat lm "-" pn "-" ty))
+        (let* ((s (concat "cl-" lm "-" pn "-" ty))
                (v (symbol-value (intern s)))
                (e (cl-format nil "~e" v)))
           (should (eql v (ignore-errors
@@ -459,11 +456,12 @@ Scale factor -5: | 0.000003e+06|"))))
 
 
 (ert-deftest format-048 ()
-  (should (equal (loop for i from 0 to 50
-                       for x = (expt 10.0 i)
-                       for s = (cl-format nil "~g" x)
-                       when (char-equal ?0 (aref s (1+ (position ?\. s))))
-                       collect x)
+  (should (equal (cl-loop
+                  for i from 0 to 50
+                  for x = (expt 10.0 i)
+                  for s = (cl-format nil "~g" x)
+                  when (char-equal ?0 (aref s (1+ (cl-position ?\. s))))
+                  collect x)
                  nil)))
 
 
@@ -496,9 +494,9 @@ Scale factor -5: | 0.000003e+06|"))))
 
 
 (ert-deftest format-055 ()
-  (flet ((foo (x)
-           (cl-format nil "~9,2,1,,'*g|~9,3,2,3,'?,,'$g|~9,3,2,0,'%g|~9,2g"
-                      x x x x)))
+  (cl-flet ((foo (x)
+              (cl-format nil "~9,2,1,,'*g|~9,3,2,3,'?,,'$g|~9,3,2,0,'%g|~9,2g"
+                         x x x x)))
     (should (equal (foo 0.0314159)
                    "  3.14e-2|314.2$-04|0.314e-01|  3.14e-2"))
 
@@ -1239,8 +1237,8 @@ new line and over two tabs-*")))
 
 
 (ert-deftest format-172 ()
-  (flet ((foo (n)
-           (cl-format nil "~@|(~r~) error~:p detected." n)))
+  (cl-flet ((foo (n)
+              (cl-format nil "~@|(~r~) error~:p detected." n)))
     (should (equal (foo 0)
                    "Zero errors detected."))
     (should (equal (foo 1)
@@ -1569,7 +1567,7 @@ def")))
                    (defmethod stream-line-column ((s gray-string-output-stream))
                      (let* ((a (slot-value s 'accumulator))
                             (j (length a))
-                            (i (1+ (or (position ?\n a :from-end t) -1))))
+                            (i (1+ (or (cl-position ?\n a :from-end t) -1))))
                        (string-width a :start i :end j)))
                    (list
                     (let ((stream (make-instance 'gray-string-output-stream)))

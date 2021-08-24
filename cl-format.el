@@ -69,7 +69,7 @@
 
 ;;; Code:
 
-(require 'cl)
+(require 'cl-lib)
 (require 'cl-format-def)
 (require 'cl-format-builtins)
 
@@ -128,21 +128,21 @@ START defaults to 0.  CONTAINED-END nil means parse until the end
 of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list of cl-format-part structs corresponding to FMT and END is 1- the last processed CHAR of FMT."
   (let* (parts done char)
     (or start (setq start 0))
-    (flet ((peek ()
-             (when (< start (length fmt))
-               (aref fmt start)))
-           (next ()
-             (prog1 (peek)
-               (incf start))))
+    (cl-labels ((peek ()
+                  (when (< start (length fmt))
+                    (aref fmt start)))
+                (next ()
+                  (prog1 (peek)
+                    (cl-incf start))))
       (while (and (not done)
                   (< start (length fmt)))
-        (destructuring-bind (literal &rest literal-end)
+        (cl-destructuring-bind (literal &rest literal-end)
             (cl-format-parse-literal fmt start)
           (if literal
               (progn
                 (push literal parts)
                 (setq start literal-end))
-            (assert (eq (peek) ?~))
+            (cl-assert (eq (peek) ?~))
             (next)
             (setq char (peek))
             (cond
@@ -152,10 +152,10 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
              (t
               ;; edebug does not understand this
               ;; (destructuring-bind (parms . parms-end)
-              (destructuring-bind (parms &rest parms-end)
+              (cl-destructuring-bind (parms &rest parms-end)
                   (cl-format-parse-parameter fmt start)
                 (setq start parms-end)
-                (destructuring-bind (flags &rest flags-end)
+                (cl-destructuring-bind (flags &rest flags-end)
                     (cl-format-parse-flags fmt start)
                   (setq start flags-end)
                   (let ((at-flag (cdr (assq :at-flag flags)))
@@ -189,8 +189,8 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
                              :parameter parms)
                             parts))
                      ((eq char ?\n)
-                      (decf start)
-                      (destructuring-bind (text &rest text-end)
+                      (cl-decf start)
+                      (cl-destructuring-bind (text &rest text-end)
                           (cl-format-parse-skip-whitespace
                            fmt start at-flag colon-flag)
                         (setq start text-end)
@@ -230,10 +230,10 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
                                     start (cdr contained)
                                     contained (cl-format-parse-clausify
                                                (car contained))
-                                    separator (remove-if-not
+                                    separator (cl-remove-if-not
                                                'cl-format-clause-separator-p
                                                contained)
-                                    contained (remove-if
+                                    contained (cl-remove-if
                                                'cl-format-clause-separator-p
                                                contained)))
                             (when (cl-format-clause-end-separator-p
@@ -286,9 +286,9 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
   (if (or colon-flag
           (and (not at-flag)
                (= (1+ start) (length fmt))))
-      (cons nil (incf start))
-    (incf start)
-    (destructuring-bind (text &rest start)
+      (cons nil (cl-incf start))
+    (cl-incf start)
+    (cl-destructuring-bind (text &rest start)
         (cl-format-parse-literal fmt start)
       (let ((idx 0))
         (while (and (< idx (length text))
@@ -296,7 +296,7 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
                           ;; (append " \t\f" nil)
                           '(32 9 12)))
         
-          (incf idx))
+          (cl-incf idx))
         (cons (concat (if at-flag
                           "\n"
                         "")
@@ -320,16 +320,16 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
   (let (flags done)
     (while (and (not done)
                 (< start (length fmt)))
-      (case (aref fmt start)
+      (cl-case (aref fmt start)
         (?@ (push (cons :at-flag t) flags))
         (?: (push (cons :colon-flag t) flags))
         (t (setq done t)))
       (unless done
-        (incf start)))
+        (cl-incf start)))
     (cons flags start)))
   
 (defun cl-format-parse-literal (fmt start)
-  (let ((end (or (position ?~ fmt :start start)
+  (let ((end (or (cl-position ?~ fmt :start start)
                  (length fmt))))
     (cons (unless (= start end)
             (substring fmt start end))
@@ -366,7 +366,7 @@ of FMT.  This function returns a cons (FMT-LIST . END), where FMT-LIST is a list
       (if (or (>= start (length fmt))
               (not (eq ?, (aref fmt start))))
           (setq done t)
-        (incf start))
+        (cl-incf start))
       
       (when (and (or (not done) not-first)
                  (not arg-read))
@@ -680,7 +680,7 @@ POS defaults to point.  This function uses
             (while (and (< paren-pos (point))
                         (ignore-errors
                           (backward-sexp) t))
-              (incf i))
+              (cl-incf i))
             (let ((form (assq (intern-soft (current-word t))
                               cl-format-fontify-defforms-alist)))
               (and form
