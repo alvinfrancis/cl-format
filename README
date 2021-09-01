@@ -1,5 +1,7 @@
 ;;; Commentary:
 
+;; See https://gitlab.com/akater/elisp-cl-format for the currently maintained version of the project.
+
 ;; This package implements a CL format routine.
 ;;
 ;; Features:
